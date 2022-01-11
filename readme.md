@@ -28,6 +28,9 @@ Theory and implementation of pattern recognition algorithms.
 - [Dimensionality Reduction](./DimensionalityReduction/)
     - PCA (Principal Component Analysis)
     - LDA (Linear Discriminant Analysis)
+- [Whitening](./Whitening/)
+    - PCA Whitening
+    - ZCA Whitening
 - [Clustering](./Clustering/)
     - K-Means
     - Spectral Clustering
