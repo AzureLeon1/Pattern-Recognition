@@ -33,7 +33,7 @@ def tanh_derivative(x):
 
 
 def rand(a, b):
-	return (b - a) * random.random() + a
+    return (b - a) * random.random() + a
 
 
 class MLP:
