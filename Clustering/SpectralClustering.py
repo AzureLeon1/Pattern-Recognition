@@ -8,7 +8,7 @@ import math
 
 
 def load_data2():
-    data_path = './data2.mat'
+    data_path = '../datasets/ClusteringData/data2.mat'
     data = loadmat(data_path)
     data = data['X']
     data = np.insert(data, 2, 0, axis=1)  # 新增一列，用于标记每个样本的真实类别
@@ -109,7 +109,7 @@ class SpectralClustering:
 
         # 根据预测的标签画出所有的样本
         plt.scatter(data[:, 0], data[:, 1], c=y_pred)
-        plt.savefig("spectral.png", dpi=300)
+        plt.savefig("./img/p2-spectral.png", dpi=300)
         plt.show()
         return accuracy
 

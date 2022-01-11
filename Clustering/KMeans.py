@@ -5,7 +5,7 @@ import matplotlib.pyplot as plt
 
 
 def load_data1():
-    data_path = './data1.mat'
+    data_path = '../datasets/ClusteringData/data1.mat'
     data = loadmat(data_path)
     data = data['X']
     data = np.insert(data, 2, 0, axis=1)  # 新增一列，用于标记每个样本的真实类别
@@ -132,7 +132,7 @@ class KMeans:
             print("Ground Truth %d : %f  %f" % (i, ground_truth[i][0], ground_truth[i][1]))
         print("聚类中心误差（MSE）: %f" % mse)
 
-    def vis_result(self):
+    def vis_result(self, random_choice):
         """聚类结果可视化"""
         colors = ['r', 'b', 'k', 'g', 'm']
         for i in range(0, self.k):
@@ -140,14 +140,15 @@ class KMeans:
             plt.scatter(nodes[:, 0], nodes[:, 1], color=colors[i])
         self.centers = np.array(self.centers)
         plt.scatter(self.centers[:, 0], self.centers[:, 1], color='y', marker='+')
-        plt.savefig("random4.png", dpi=300)
+        plt.savefig("./img/p1-random"+str(random_choice)+".png", dpi=300)
         plt.show()
 
 
 if __name__ == "__main__":
     data = load_data1()
-    model = KMeans(data=data, random=4)
+    random_choice = 4
+    model = KMeans(data=data, random=random_choice)
     model.iterate()
     ground_truth = np.array([[1, -1], [5.5, -4.5], [1, 4], [6, 4.5], [9, 0]])
     model.evaluate(ground_truth)
-    model.vis_result()
+    model.vis_result(random_choice)
