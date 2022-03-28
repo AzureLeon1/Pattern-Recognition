@@ -8,7 +8,7 @@ def read_data():
     data = np.genfromtxt('../datasets/NNData/data.csv', delimiter=',')
     features = data[:, :3]
     labels = data[:, 3]
-    labels = np.array(list(map(int, data[:, 3])))
+    labels = np.array(list(map(int, labels)))
     return features, labels
 
 
