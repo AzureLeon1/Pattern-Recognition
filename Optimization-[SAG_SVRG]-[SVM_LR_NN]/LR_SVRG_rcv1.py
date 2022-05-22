@@ -15,7 +15,7 @@ import matplotlib.pyplot as plt
 
 class LibsvmIterDataset(IterableDataset):
     def __init__(self, file_path, n_features):
-        """
+        """LIBSVM格式数据顺序读取
         file_path: Libsvm格式数据文件地址
         n_features: 特征数
         """
@@ -40,7 +40,7 @@ class LibsvmIterDataset(IterableDataset):
 
 class LibsvmDataset(Dataset):
     def __init__(self, file_path, n_features):
-        """
+        """LIBSVM格式数据随机读取
         file_path: Libsvm格式数据文件地址
         n_features: 特征数，从1开始
         """
@@ -191,7 +191,7 @@ def build_train_test_set(dataloader, n_samples, n_features, ratio=0.8):
 
 
 if __name__=='__main__':
-
+    # 读取数据
     file_path = '/home/wangliang/datasets/Pattern-Recogniition/rcv1_binary/sampled_data_label01.npz'
 
     print('====== Load sampled data from cache =======')
@@ -205,12 +205,14 @@ if __name__=='__main__':
     n_samples = n_train_samples + n_test_samples
     n_features = train_features.shape[1]
 
+    # 模型训练与评估
     clf = LogisticRegression(n_samples=n_samples, n_features=n_features)
     print('====== Train =======')
     train_acc, list_train_obj_func, list_test_obj_func = clf.fit_svrg(train_features, train_labels, test_features, test_labels, lr=0.1, epoch=100, inner_epoch=100, alpha=0)
     print('====== Eval =======')
     print('Best Accuracy: {:.2%}'.format(max(train_acc)))
 
+    # 绘制实验结果
     import datetime
     import time
 

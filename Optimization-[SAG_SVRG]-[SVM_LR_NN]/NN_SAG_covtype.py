@@ -26,7 +26,7 @@ def get_data(x):
 
 class LibsvmIterDataset(IterableDataset):
     def __init__(self, file_path, n_features):
-        """
+        """LIBSVM格式数据顺序读取
         file_path: Libsvm格式数据文件地址
         n_features: 特征数
         """
@@ -50,7 +50,7 @@ class LibsvmIterDataset(IterableDataset):
 
 class LibsvmDataset(Dataset):
     def __init__(self, file_path, n_features):
-        """
+        """LIBSVM格式数据随机读取
         file_path: Libsvm格式数据文件地址
         n_features: 特征数，从1开始
         """

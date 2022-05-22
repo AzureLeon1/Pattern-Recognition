@@ -15,7 +15,7 @@ import matplotlib.pyplot as plt
 
 class LibsvmIterDataset(IterableDataset):
     def __init__(self, file_path, n_features):
-        """
+        """LIBSVM格式数据顺序读取
         file_path: Libsvm格式数据文件地址
         n_features: 特征数
         """
@@ -40,7 +40,7 @@ class LibsvmIterDataset(IterableDataset):
 
 class LibsvmDataset(Dataset):
     def __init__(self, file_path, n_features):
-        """
+        """LIBSVM格式数据随机读取
         file_path: Libsvm格式数据文件地址
         n_features: 特征数，从1开始
         """
@@ -125,7 +125,6 @@ class LogisticRegression:
             accuracy = self.eval(test_features, test_labels)
             list_acc.append(accuracy)
             train_obj_func = 0.5 * alpha * np.linalg.norm(self._w)**2 - np.sum((train_labels * np.log(self.predict(train_features, True)) + (1 - train_labels) * np.log(1 - self.predict(train_features, True)))) / n_train_samples
-            # print('value: {}, term 1: {}, term 2: {}'.format(train_obj_func, term1, term2))
             list_train_obj_func.append(train_obj_func)
             test_obj_func = 0.5 * alpha * np.linalg.norm(self._w)**2 - np.sum((test_labels * np.log(self.predict(test_features, True)) + (1 - test_labels) * np.log(1 - self.predict(test_features, True)))) / n_test_samples
             list_test_obj_func.append(test_obj_func)
@@ -170,6 +169,7 @@ def build_dataset(dataloader, n_samples, n_features):
 
 
 if __name__=='__main__':
+    # 读取数据
     file_path = '/home/wangliang/datasets/Pattern-Recogniition/rcv1_binary/sampled_data_label01.npz'
 
     print('====== Load sampled data from cache =======')
@@ -182,12 +182,14 @@ if __name__=='__main__':
     n_samples = n_train_samples + n_test_samples
     n_features = train_features.shape[1]
 
+    # 模型训练与评估
     clf = LogisticRegression(n_samples=n_samples, n_features=n_features)
     print('====== Train =======')
     train_acc, list_train_obj_func, list_test_obj_func = clf.fit_sag(train_features, train_labels, test_features, test_labels, lr=0.1, epoch=5000, alpha=0)
     print('====== Eval =======')
     print('Best Accuracy: {:.2%}'.format(max(train_acc)))
 
+    # 绘制实验结果
     plt.xlabel("#Epoch")
     plt.ylabel("#Accuracy")
     plt.plot(range(len(train_acc)), train_acc)

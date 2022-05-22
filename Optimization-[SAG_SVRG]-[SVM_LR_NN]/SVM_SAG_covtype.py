@@ -15,7 +15,7 @@ import matplotlib.pyplot as plt
 
 class LibsvmIterDataset(IterableDataset):
     def __init__(self, file_path, n_features):
-        """
+        """LIBSVM格式数据顺序读取
         file_path: Libsvm格式数据文件地址
         n_features: 特征数
         """
@@ -40,7 +40,7 @@ class LibsvmIterDataset(IterableDataset):
 
 class LibsvmDataset(Dataset):
     def __init__(self, file_path, n_features):
-        """
+        """LIBSVM格式数据随机读取
         file_path: Libsvm格式数据文件地址
         n_features: 特征数，从1开始
         """
@@ -167,6 +167,7 @@ def build_train_test_set(dataloader, n_samples, n_features, ratio=0.8):
 
 
 if __name__=='__main__':
+    # 读取数据
     dataset_covtype_iter = LibsvmIterDataset('/home/wangliang/datasets/Pattern-Recogniition/covtype_binary/covtype.libsvm.binary.scale', 54)
     dataloader_covtype_iter = DataLoader(dataset_covtype_iter, batch_size=1)   # 用于顺序迭代 covtype_binary 数据集
     dataset_covtype = LibsvmDataset('/home/wangliang/datasets/Pattern-Recogniition/covtype_binary/covtype.libsvm.binary.scale', 54)  # 用于按索引随机读取 covtype_binary 数据集
@@ -186,6 +187,7 @@ if __name__=='__main__':
         np.savez(file_path, train_features=train_features, train_labels=train_labels, test_features=test_features, test_labels=test_labels)
     print('====== Done =======')
 
+    # 模型训练与评估
     svm = LinearSVM(n_samples=n_samples, n_features=n_features)
     print('====== Train =======')
     train_acc, list_train_obj_func, list_test_obj_func = svm.fit_sag(
@@ -193,6 +195,7 @@ if __name__=='__main__':
     print('====== Eval =======')
     print('Best Accuracy: {:.2%}'.format(max(train_acc)))
 
+    # 绘制实验结果
     import datetime
     import time
 

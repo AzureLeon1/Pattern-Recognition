@@ -15,7 +15,7 @@ import matplotlib.pyplot as plt
 
 class LibsvmIterDataset(IterableDataset):
     def __init__(self, file_path, n_features):
-        """
+        """LIBSVM格式数据顺序读取
         file_path: Libsvm格式数据文件地址
         n_features: 特征数
         """
@@ -42,7 +42,7 @@ class LibsvmIterDataset(IterableDataset):
 
 class LibsvmDataset(Dataset):
     def __init__(self, file_path, n_features):
-        """
+        """LIBSVM格式数据随机读取
         file_path: Libsvm格式数据文件地址
         n_features: 特征数，从1开始
         """
@@ -73,6 +73,8 @@ class LibsvmDataset(Dataset):
         return count
 
 class LogisticRegression:
+    """逻辑回归模型，提供 SG 和 SAG 优化算法
+    """
     def __init__(self, n_samples, n_features):
         self.n_samples = n_samples
         self.n_features = n_features
@@ -171,7 +173,6 @@ def build_train_test_set(dataloader, n_samples, n_features, ratio=0.8):
     test_id = 0
     pbar = tqdm(total=n_samples)
     for id, data in enumerate(dataloader):
-        # print(id)
         if id in train_sample_ids:
             label, feature = data
             label = label.numpy()[0]
@@ -195,6 +196,7 @@ def build_train_test_set(dataloader, n_samples, n_features, ratio=0.8):
 
 
 if __name__=='__main__':
+    # 读取数据
     dataset_covtype_iter = LibsvmIterDataset('/home/wangliang/datasets/Pattern-Recogniition/covtype_binary/covtype.libsvm.binary.scale', 54)
     dataloader_covtype_iter = DataLoader(dataset_covtype_iter, batch_size=1)   # 用于顺序迭代 covtype_binary 数据集
     dataset_covtype = LibsvmDataset('/home/wangliang/datasets/Pattern-Recogniition/covtype_binary/covtype.libsvm.binary.scale', 54)  # 用于按索引随机读取 covtype_binary 数据集
@@ -214,12 +216,14 @@ if __name__=='__main__':
         np.savez(file_path, train_features=train_features, train_labels=train_labels, test_features=test_features, test_labels=test_labels)
     print('====== Done =======')
 
+    # 模型训练与评估
     clf = LogisticRegression(n_samples=n_samples, n_features=n_features)
     print('====== Train =======')
     train_acc, list_train_obj_func, list_test_obj_func = clf.fit_sag(train_features, train_labels, test_features, test_labels, lr=0.1, epoch=5000, alpha=0)
     print('====== Eval =======')
     print('Best Accuracy: {:.2%}'.format(max(train_acc)))
 
+    # 绘制实验结果
     plt.xlabel("#Epoch")
     plt.ylabel("#Accuracy")
     plt.plot(range(len(train_acc)), train_acc)

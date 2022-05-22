@@ -10,6 +10,8 @@ from tqdm import tqdm
 from torch.utils.data import Dataset, IterableDataset, DataLoader
 
 def build_dataset(dataloader, n_samples, n_features):
+    """根据 Dataloader 构造 numpy.array 格式的数据
+    """
     features = np.zeros((n_samples, n_features))
     labels = np.zeros(n_samples)
     pbar = tqdm(total=n_samples)
@@ -26,7 +28,7 @@ def build_dataset(dataloader, n_samples, n_features):
 
 class LibsvmIterDataset(IterableDataset):
     def __init__(self, file_path, n_features):
-        """
+        """LIBSVM格式数据顺序读取
         file_path: Libsvm格式数据文件地址
         n_features: 特征数
         """
@@ -53,7 +55,7 @@ class LibsvmIterDataset(IterableDataset):
 
 class LibsvmDataset(Dataset):
     def __init__(self, file_path, n_features):
-        """
+        """LIBSVM格式数据随机读取
         file_path: Libsvm格式数据文件地址
         n_features: 特征数，从1开始
         """
