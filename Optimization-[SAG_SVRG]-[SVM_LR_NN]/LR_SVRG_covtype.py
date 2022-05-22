@@ -1,3 +1,11 @@
+# -*-coding:utf-8 -*-
+'''
+@File    :   LR_SVRG_covtype.py
+@Time    :   2022/05/22 11:09:33
+@Author  :   Liang Wang
+@Contact :   wangliang.leon20@gmail.com
+@Desc    :   逻辑回归 + SVRG优化算法 + covtype_binary数据集
+'''
 import torch
 import os
 from tqdm import tqdm
@@ -42,9 +50,7 @@ class LibsvmDataset(Dataset):
         self.n_features = n_features + 1
 
     def process_line(self, line):
-        #         print(line)
         line = line.strip().split(' ')
-        #         print(line)
         label, values = int(line[0]), line[1:]
         value = np.zeros((self.n_features))
         for item in values:
@@ -66,17 +72,13 @@ class LibsvmDataset(Dataset):
                 count += 1
         return count
 
-
-class LinearSVM:
-    def __init__(self, n_samples, n_features, split_ratio=0.7):
+class LogisticRegression:
+    def __init__(self, n_samples, n_features):
         self.n_samples = n_samples
         self.n_features = n_features
-        self.split_ratio = split_ratio
         self._w = np.zeros(n_features)
-        # self._b = 0.
 
-    def fit_sag(self, train_features, train_labels, test_features, test_labels, c=1, lr=0.01, epoch=10000, alpha=0.01):
-        #         x, y = np.asarray(x, np.float32), np.asarray(y, np.float32)
+    def fit_svrg(self, train_features, train_labels, test_features, test_labels, lr=0.01, epoch=100, inner_epoch=100, alpha=1.0):
         n_train_samples = train_features.shape[0]
         n_test_samples = test_features.shape[0]
         grad = 0  # 总梯度
@@ -84,55 +86,68 @@ class LinearSVM:
         list_acc = []
         list_train_obj_func = []
         list_test_obj_func = []
-        for _ in tqdm(range(epoch)):
-            # self._w -= lr * alpha * self._w
-            #
-            # random_id = np.random.choice(n_train_samples)
-            # y = train_labels[random_id]
-            # x = train_features[random_id]
-            # err = 1 - y * self.predict(x, True)
-            # if err <= 0:
-            #     continue
-            # new_grad_sample = - c * y * x
-            # grad = grad - grad_sample[random_id] + new_grad_sample
-            # grad_sample[random_id] = new_grad_sample
-            #
-            # self._w -= lr * grad
+        # for epoch_id in tqdm(range(epoch)):
+        for epoch_id in range(epoch):
 
+            # 计算全梯度
+            grad_all = alpha * self._w + np.mean((((self.predict(train_features, True) - train_labels).reshape(-1,1).repeat(n_features, axis=1)) * train_features), axis=0)
+            w_saved = self._w.copy()
 
-            random_id = np.random.choice(n_train_samples)
-            y = train_labels[random_id]
-            x = train_features[random_id]
-            err = 1 - y * self.predict(x, True)
-            if err <= 0:
-                new_grad_sample = alpha * self._w
-            else:
-                new_grad_sample = alpha * self._w - c * y * x
-            grad = grad - grad_sample[random_id] + new_grad_sample
-            grad_sample[random_id] = new_grad_sample
-            self._w -= lr / n_train_samples * grad
+            # 内循环
+            w_inner = np.zeros((inner_epoch, n_features))
+            for inner_epoch_id in range(inner_epoch):
 
-            # self._w -= lr * grad + 2 * lambda_ * lr * self._w
+                random_id = np.random.choice(n_train_samples)
+                y = train_labels[random_id]
+                x = train_features[random_id]
+                grad = alpha * self._w + (self.predict(x, True) - y) * x
+                grad -= (alpha*w_saved + (self.predict_with_saved_w(x, w_saved)-y) * x - grad_all)
+                self._w -= lr * grad / n_train_samples
+                w_inner[inner_epoch_id] = self._w.copy()
+
+                if inner_epoch_id % 10 == 0:
+                    accuracy = self.eval(test_features, test_labels)
+                    list_acc.append(accuracy)
+                    train_obj_func = 0.5 * alpha * np.linalg.norm(self._w) ** 2 - np.sum((train_labels * np.log(
+                        self.predict(train_features, True)) + (1 - train_labels) * np.log(
+                        1 - self.predict(train_features, True)))) / n_train_samples
+                    # print('value: {}, term 1: {}, term 2: {}'.format(train_obj_func, term1, term2))
+                    list_train_obj_func.append(train_obj_func)
+                    test_obj_func = 0.5 * alpha * np.linalg.norm(self._w) ** 2 - np.sum((test_labels * np.log(
+                        self.predict(test_features, True)) + (1 - test_labels) * np.log(
+                        1 - self.predict(test_features, True)))) / n_test_samples
+                    list_test_obj_func.append(test_obj_func)
+
+            # 取内循环迭代的参数的均值进行更新
+            self._w = np.mean(w_inner, axis=0)
+
             # ====== Train Eval =======
-            accuracy = svm.eval(test_features, test_labels)
-            print('acc: {}'.format(accuracy))
+            accuracy = self.eval(test_features, test_labels)
             list_acc.append(accuracy)
-            term1 = 0.5 * alpha  * np.linalg.norm(self._w)**2
-            term2 = c * np.mean(np.maximum(1-train_labels * (train_features @ self._w), np.zeros(n_train_samples)))
-            train_obj_func = term1 + term2
-            print('value: {}, term 1: {}, term 2: {}'.format(train_obj_func, term1, term2))
+            train_obj_func = 0.5 * alpha * np.linalg.norm(self._w)**2 - np.sum((train_labels * np.log(self.predict(train_features, True)) + (1 - train_labels) * np.log(1 - self.predict(train_features, True)))) / n_train_samples
+            # print('value: {}, term 1: {}, term 2: {}'.format(train_obj_func, term1, term2))
             list_train_obj_func.append(train_obj_func)
-            test_obj_func = 0.5 * alpha * np.linalg.norm(self._w)**2 + c * np.mean(np.maximum(1-test_labels * (test_features @ self._w), np.zeros(n_test_samples)))
+            test_obj_func = 0.5 * alpha * np.linalg.norm(self._w)**2 - np.sum((test_labels * np.log(self.predict(test_features, True)) + (1 - test_labels) * np.log(1 - self.predict(test_features, True)))) / n_test_samples
             list_test_obj_func.append(test_obj_func)
+            print('Epoch: {}, Test Acc: {}, v1: {}, v2: {}'.format(epoch_id, accuracy, train_obj_func, test_obj_func))
+
         return list_acc, list_train_obj_func, list_test_obj_func
 
 
+    def sigmoid(self, x):
+        return 1 / (1 + np.exp(-x))
+
     def predict(self, x, raw=False):
         x = np.asarray(x, np.float32)
-        y_pred = x.dot(self._w)
+        y_pred = self.sigmoid(x @ self._w)
         if raw:
             return y_pred
-        return np.sign(y_pred).astype(np.float32)  # because ground truth is in [1, 2]
+        return list(map(lambda x: 0 if x<=0.5 else 1, y_pred))
+
+    def predict_with_saved_w(self, x, w_saved):
+        x = np.asarray(x, np.float32)
+        y_pred = self.sigmoid(x @ w_saved)
+        return y_pred
 
     def eval(self, test_features, test_labels):
         x = test_features
@@ -141,14 +156,13 @@ class LinearSVM:
         accuracy = (y==y_pred).sum() / len(y)
         return accuracy
 
+
 def build_train_test_set(dataloader, n_samples, n_features, ratio=0.8):
     n_train_samples = int(n_samples * ratio)
     n_test_samples = n_samples - n_train_samples
     perm = np.random.permutation(n_samples)
     train_sample_ids = perm[:n_train_samples]
     test_sample_ids = perm[n_train_samples:]
-    # print(train_sample_ids)
-    # print(test_sample_ids)
     train_features = np.zeros((n_train_samples, n_features))
     train_labels = np.zeros(n_train_samples)
     test_features = np.zeros((n_test_samples, n_features))
@@ -157,12 +171,11 @@ def build_train_test_set(dataloader, n_samples, n_features, ratio=0.8):
     test_id = 0
     pbar = tqdm(total=n_samples)
     for id, data in enumerate(dataloader):
-        # print(id)
         if id in train_sample_ids:
             label, feature = data
             label = label.numpy()[0]
             feature = feature.numpy()[0]
-            label = -1. if label == 1 else 1.  # map lables {1, 2} to {-1, 1}
+            label = 0 if label == 1 else 1  # map lables {1, 2} to {0, 1}
             train_features[train_id] = feature
             train_labels[train_id] = label
             train_id += 1
@@ -170,7 +183,7 @@ def build_train_test_set(dataloader, n_samples, n_features, ratio=0.8):
             label, feature = data
             label = label.numpy()[0]
             feature = feature.numpy()[0]
-            label = -1. if label == 1 else 1.  # map lables {1, 2} to {-1, 1}
+            label = 0 if label == 1 else 1  # map lables {1, 2} to {0, 1}
             test_features[test_id] = feature
             test_labels[test_id] = label
             test_id += 1
@@ -188,7 +201,7 @@ if __name__=='__main__':
     n_samples = len(dataset_covtype)
     n_features = dataset_covtype_iter.n_features  # 55 (54 + 1)
 
-    file_path = '/home/wangliang/datasets/Pattern-Recogniition/covtype_binary/full_data.npz'
+    file_path = '/home/wangliang/datasets/Pattern-Recogniition/covtype_binary/full_data_label01.npz'
 
     print('====== Prepare data =======')
     if os.path.exists(file_path):
@@ -200,70 +213,35 @@ if __name__=='__main__':
         np.savez(file_path, train_features=train_features, train_labels=train_labels, test_features=test_features, test_labels=test_labels)
     print('====== Done =======')
 
-    svm = LinearSVM(n_samples=n_samples, n_features=n_features)
+    clf = LogisticRegression(n_samples=n_samples, n_features=n_features)
     print('====== Train =======')
-    train_acc, list_train_obj_func, list_test_obj_func = svm.fit_sag(train_features, train_labels, test_features, test_labels, c=1, lr=0.1, epoch=100000, alpha=1)
+    train_acc, list_train_obj_func, list_test_obj_func = clf.fit_svrg(train_features, train_labels, test_features, test_labels, lr=0.1, epoch=100, inner_epoch=100, alpha=0)
     print('====== Eval =======')
-    # accuracy = svm.eval(test_features, test_labels)
-    # print('Test Accuracy: {:.2%}'.format(accuracy))
     print('Best Accuracy: {:.2%}'.format(max(train_acc)))
 
+    import datetime
+    import time
 
-    # print(train_acc)
+    stamp = int(time.time())
+    s_time = str(datetime.datetime.fromtimestamp(stamp))[11:]
+
     plt.xlabel("#Epoch")
-    plt.ylabel("#Accuracy")
+    plt.title("[LR_SVRG] Accuracy")
     plt.plot(range(len(train_acc)), train_acc)
     plt.show()
+    fig_name = './img/lr_svrg_acc_{}.jpg'.format(s_time)
+    plt.savefig(fig_name)
 
     plt.xlabel("#Epoch")
-    plt.title("Objective function value on training set")
+    plt.title("[LR_SVRG] Objective on training set")
     plt.plot(range(len(list_train_obj_func)), list_train_obj_func)
     plt.show()
+    fig_name = './img/lr_svrg_obj_train_{}.jpg'.format(s_time)
+    plt.savefig(fig_name)
 
     plt.xlabel("#Epoch")
-    plt.title("Objective function value on testing set")
+    plt.title("[LR_SVRG] Objective on testing set")
     plt.plot(range(len(list_test_obj_func)), list_test_obj_func)
     plt.show()
-
-    # 验证sklearn
-    from sklearn.linear_model import SGDClassifier
-    from sklearn.preprocessing import StandardScaler
-    from sklearn.pipeline import make_pipeline
-    from sklearn.linear_model import LogisticRegression
-
-    # 0.762
-    # clf = make_pipeline(StandardScaler(), SGDClassifier(max_iter=300000, tol=1e-3))
-    # clf.fit(train_features, train_labels)
-    # y_pred = clf.predict(test_features)
-    # accuracy = (test_labels == y_pred).sum() / len(test_labels)
-    # print(accuracy)
-
-    # 0.761
-    # clf = SGDClassifier(max_iter=6000, tol=1e-3)
-    # clf.fit(train_features, train_labels)
-    # y_pred = clf.predict(test_features)
-    # accuracy = (test_labels == y_pred).sum() / len(test_labels)
-    # print(accuracy)
-
-    # 0.756
-    # clf = LogisticRegression(penalty='l2')
-    # clf.fit(train_features, train_labels)
-    # y_pred = clf.predict(test_features)
-    # accuracy = (test_labels == y_pred).sum() / len(test_labels)
-    # print(accuracy)
-
-    # clf = SGDClassifier(loss='log', max_iter=6000, tol=1e-3)
-    # clf.fit(train_features, train_labels)
-    # y_pred = clf.predict(test_features)
-    # accuracy = (test_labels == y_pred).sum() / len(test_labels)
-    # print(accuracy)
-
-    # 0.75
-    # clf = SGDClassifier(loss='log', max_iter=500, tol=1e-3)
-    # clf.fit(train_features, train_labels)
-    # accuracy = clf.score(test_features, test_labels)
-    # print(accuracy)
-
-
-
-
+    fig_name = './img/lr_svrg_obj_test_{}.jpg'.format(s_time)
+    plt.savefig(fig_name)
